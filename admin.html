@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Midnight Lashes</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Raleway:wght@300;500;700&display=swap" rel="stylesheet">
+
+<style>
+body { font-family: 'Raleway', sans-serif; background: linear-gradient(135deg,#fdf6ec,#fff3e8); color: #4b3a2f; margin:0; padding:0; display:flex; justify-content:center; padding-top:50px; }
+.container { max-width: 800px; background-color: #fff8f0; padding:30px; border-radius:20px; box-shadow:0 10px 30px rgba(0,0,0,0.08); }
+h1 { font-family:'Dancing Script', cursive; text-align:center; color:#d4af37; margin-bottom:20px; font-size:3rem; }
+input, select, button { width:100%; padding:12px; margin-bottom:15px; border-radius:10px; border:2px solid #d4af37; font-size:1rem; }
+button { background-color:#d4af37; color:white; font-weight:600; cursor:pointer; transition:all 0.3s; }
+button:hover { background-color:#e6c965; color:#4b3a2f; }
+#mensagem,#mensagem2 { font-weight:bold; text-align:center; margin-top:10px; }
+.agendamento-pendente { border-bottom:1px solid #d4af37; padding:12px 0; margin-bottom:12px; text-align:left; }
+.agendamento-pendente button { width:48%; margin-right:2%; display:inline-block; padding:8px 0; font-size:0.9rem; border-radius:8px; }
+.agendamento-info { font-size:0.9rem; color:#4b3a2f; margin-top:5px; }
+</style>
+</head>
+<body>
+
+<div class="container" id="login-container">
+  <h1>Admin Login</h1>
+  <input type="password" id="senha" placeholder="Senha de Administrador">
+  <button onclick="verificarSenha()">Entrar</button>
+  <p id="mensagem"></p>
+</div>
+
+<div class="container" id="admin-panel" style="display:none;">
+  <h1>Painel de Administração</h1>
+
+  <label>Data:</label>
+  <input type="date" id="data" onchange="gerarHorarios(); carregarAgendamentosPendentes()">
+
+  <label>Hora:</label>
+  <select id="hora"></select>
+
+  <button onclick="bloquearHorario()">Bloquear Horário</button>
+  <button onclick="desbloquearHorario()">Desbloquear Horário</button>
+  <button onclick="bloquearDiaInteiro()">Bloquear Dia Inteiro</button>
+
+  <h2>Agendamentos pendentes</h2>
+  <div id="pendentes"></div>
+  <p id="mensagem2"></p>
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<!-- EmailJS -->
+<script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+<script>
+emailjs.init("NzMSgw7ZEn38WIE5W");
+</script>
+
+<script>
+// Firebase config
+const firebaseConfig = {
+  apiKey:"AIzaSyCDpSiUtAIqfXnb3s9F9A6WX1mgUL_9fxo",
+  authDomain:"midnighlashes.firebaseapp.com",
+  projectId:"midnighlashes",
+  storageBucket:"midnighlashes.firebasestorage.app",
+  messagingSenderId:"811371305708",
+  appId:"1:811371305708:web:b857bdf2a19fa704f8a3c9",
+  measurementId:"G-9PEQLQKCWC"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// LOGIN
+function verificarSenha() {
+  const senha = document.getElementById('senha').value;
+  if (senha === "Yoshi2022") {
+    document.getElementById('login-container').style.display = 'none';
+    document.getElementById('admin-panel').style.display = 'block';
+    gerarHorarios();
+    carregarAgendamentosPendentes();
+  } else {
+    document.getElementById('mensagem').innerText = "Senha incorreta!";
+  }
+}
+
+// GERAR HORÁRIOS
+function gerarHorarios() {
+  const select = document.getElementById('hora');
+  select.innerHTML = "";
+  let hora = 9, minuto = 0;
+  while (hora < 19 || (hora===19 && minuto===0)) {
+    let h = hora<10?'0'+hora:hora;
+    let m = minuto===0?'00':'30';
+    const value = `${h}:${m}`;
+    const option = document.createElement('option');
+    option.value = value;
+    option.text = value;
+    select.appendChild(option);
+    minuto+=30;
+    if(minuto===60){ minuto=0; hora++; }
+  }
+}
+
+// BLOQUEAR HORÁRIO
+async function bloquearHorario(){
+  const data=document.getElementById('data').value;
+  const hora=document.getElementById('hora').value;
+  if(!data||!hora) return;
+
+  await db.collection("agendamentos").add({
+    data, hora,
+    status:"bloqueado",
+    criadoEm:new Date()
+  });
+  alert(`Horário ${hora} em ${data} bloqueado!`);
+}
+
+// DESBLOQUEAR HORÁRIO
+async function desbloquearHorario(){
+  const data=document.getElementById('data').value;
+  const hora=document.getElementById('hora').value;
+  if(!data||!hora) return;
+
+  const snapshot = await db.collection("agendamentos")
+    .where("data","==",data)
+    .where("hora","==",hora)
+    .where("status","==","bloqueado").get();
+
+  snapshot.forEach(doc => doc.ref.delete());
+  alert(`Horário ${hora} em ${data} desbloqueado!`);
+}
+
+// BLOQUEAR DIA INTEIRO
+async function bloquearDiaInteiro(){
+  const data=document.getElementById('data').value;
+  if(!data) return;
+  let hora=9,minuto=0;
+  const ops=[];
+  while(hora<19||(hora===19&&minuto===0)){
+    let h = hora<10?'0'+hora:hora;
+    let m = minuto===0?'00':'30';
+    ops.push(db.collection("agendamentos").add({
+      data, hora:`${h}:${m}`,
+      status:"bloqueado",
+      criadoEm:new Date()
+    }));
+    minuto+=30;
+    if(minuto===60){ minuto=0; hora++; }
+  }
+  await Promise.all(ops);
+  alert(`Dia ${data} bloqueado completamente!`);
+}
+
+// CARREGAR AGENDAMENTOS PENDENTES
+async function carregarAgendamentosPendentes(){
+  const div=document.getElementById('pendentes');
+  div.innerHTML="";
+
+  const snapshot=await db.collection("agendamentos")
+    .where("status","==","pendente_pagamento")
+    .orderBy("criadoEm","asc").get();
+
+  snapshot.forEach(doc=>{
+    const ag = doc.data();
+    const item = document.createElement('div');
+    item.className="agendamento-pendente";
+    item.innerHTML=`
+      <strong>${ag.nome}</strong><br>
+      ${ag.data} ${ag.hora}<br>
+      Email: ${ag.email}<br>
+      Contacto: ${ag.contato}<br>
+      <span class="agendamento-info">Status: ${ag.status}</span><br><br>
+      <button onclick="aprovarAgendamento('${doc.id}','${ag.nome}','${ag.email}','${ag.data}','${ag.hora}')">
+        Aprovar
+      </button>
+      <button onclick="recusarAgendamento('${doc.id}')">
+        Recusar
+      </button>
+    `;
+    div.appendChild(item);
+  });
+}
+
+// APROVAR
+async function aprovarAgendamento(docId,nome,email,data,hora){
+  try{
+    await db.collection("agendamentos").doc(docId).update({status:"confirmado"});
+    emailjs.send("service_clniqou","template_svu17s8",{
+      to_name:nome,
+      to_email:email,
+      data_agendamento:data,
+      hora_agendamento:hora,
+      morada:"Anocassss - Av. Acácias n18 Loja3, 2675-221 Odivelas"
+    });
+    alert("Agendamento aprovado e email enviado!");
+    carregarAgendamentosPendentes();
+  }catch(err){
+    alert("Erro: "+err);
+  }
+}
+
+// RECUSAR
+async function recusarAgendamento(docId){
+  try{
+    await db.collection("agendamentos").doc(docId).delete();
+    alert("Agendamento recusado!");
+    carregarAgendamentosPendentes();
+  }catch(err){
+    alert("Erro ao recusar: "+err);
+  }
+}
+</script>
+</body>
+</html>
