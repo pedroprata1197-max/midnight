@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin • Midnight Beauty</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg:#f6efe8; --card:#fff; --accent:#141212; --muted:#7f766e; --soft:#e7ded4;
+    }
+    body{ background:var(--bg); font-family:"Montserrat",sans-serif; padding:24px; }
+    .wrap{ max-width:1100px; margin:0 auto; background:var(--card); padding:18px; border-radius:12px; border:1px solid var(--soft); }
+    header{ display:flex; justify-content:space-between; align-items:center; gap:12px; }
+    header h1{ font-family:"Playfair Display",serif; margin:0; font-size:20px; }
+    .grid{ display:grid; grid-template-columns:360px 1fr; gap:18px; margin-top:18px; }
+    .card{ background:var(--card); padding:14px; border-radius:10px; border:1px solid var(--soft); }
+    label{ display:block; font-size:13px; color:var(--muted); margin-top:8px; }
+    input, select{ width:100%; padding:10px; margin-top:6px; border-radius:8px; border:1px solid var(--soft); }
+    button{ padding:10px 12px; border-radius:8px; border:1px solid var(--accent); background:transparent; cursor:pointer; margin-top:8px; }
+    .btn-danger{ border-color:#b90e0e; color:#b90e0e; }
+    .btn-ok{ border-color:#0b8a3e; color:#0b8a3e; }
+    .booking-list{ max-height:560px; overflow:auto; margin-top:6px; }
+    .booking-item{ display:flex; justify-content:space-between; align-items:flex-start; padding:10px 0; border-bottom:1px dashed rgba(0,0,0,0.04); }
+    .booking-meta{ font-size:13px; color:var(--muted); margin-top:6px; }
+    .small{ font-size:12px; color:var(--muted); }
+    .pill{ padding:6px 8px; border-radius:8px; font-size:12px; border:1px solid #ddd; background:#fff; }
+    @media (max-width:980px){ .grid{ grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Admin • Midnight Beauty</h1>
+        <div class="small">Painel de gestão de reservas — aprovar/recusar, marcar pago, bloquear dias/horas.</div>
+      </div>
+      <div>
+        <button id="logoutBtn">Sair</button>
+      </div>
+    </header>
+
+    <div class="grid">
+      <div>
+        <div class="card">
+          <h3>Bloquear Datas / Horas</h3>
+
+          <label>Bloquear dia inteiro</label>
+          <input type="date" id="block-day">
+
+          <button id="block-day-btn">Bloquear dia inteiro</button>
+
+          <label style="margin-top:12px">Bloquear hora específica</label>
+          <input type="date" id="block-slot-date">
+          <input type="time" id="block-slot-time">
+
+          <button id="block-slot-btn">Bloquear hora</button>
+
+          <div style="margin-top:12px">
+            <strong>Bloqueios atuais</strong>
+            <div id="blocked-list" class="small" style="margin-top:8px"></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:12px">
+          <h3>Configurações & Segurança</h3>
+          <label>PIN de Acesso (4 dígitos)</label>
+          <input id="admin-pin" placeholder="Ex: 1234">
+          <button id="save-pin">Guardar PIN</button>
+
+          <div style="margin-top:10px" class="small">Nota: o sistema usa Firestore se habilitado, caso contrário usa localStorage. Para multiutilizadores e produção recomenda-se backend seguro.</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <h3>Reservas</h3>
+          <div class="booking-list" id="booking-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  /*************************************************************************
+   * This admin uses the same StorageAPI approach as index.html.
+   * If you set USE_FIREBASE = true and paste config, data will be stored
+   * in Firestore (collection 'bookings', doc 'meta' for blocked/admin).
+   *************************************************************************/
+
+  const USE_FIREBASE = false; // set true if you added config in index.html
+  // Using the same FIREBASE_CONFIG pattern as index.html if required.
+  // For simplicity admin uses localStorage if not using firebase.
+
+  // Local wrapper (same as on index; inline duplication for independence)
+  const StorageAPI = (function(){
+    return {
+      getBookings: async function(){ return JSON.parse(localStorage.getItem('mb_bookings')||'[]'); },
+      saveBooking: async function(b){ const arr = JSON.parse(localStorage.getItem('mb_bookings')||'[]'); arr.unshift(b); localStorage.setItem('mb_bookings', JSON.stringify(arr)); return b; },
+      updateBooking: async function(id, patch){ const arr = JSON.parse(localStorage.getItem('mb_bookings')||'[]'); const i = arr.findIndex(x=>x.id===id); if(i>=0){ arr[i] = {...arr[i], ...patch}; localStorage.setItem('mb_bookings', JSON.stringify(arr)); } },
+      getBlocked: async function(){ return JSON.parse(localStorage.getItem('mb_blocked')||'{"days":[],"slots":{}}'); },
+      saveBlocked: async function(b){ localStorage.setItem('mb_blocked', JSON.stringify(b)); },
+      getAdminPin: async function(){ return localStorage.getItem('mb_admin_pin') || null; },
+      setAdminPin: async function(pin){ localStorage.setItem('mb_admin_pin', pin); }
+    };
+  })();
+
+  /*************************************************************************
+   * Simple PIN auth
+   *************************************************************************/
+  function isAuthenticated(){ return sessionStorage.getItem('mb_admin_auth') === 'true'; }
+
+  async function requireAuth(){
+    const savedPin = await StorageAPI.getAdminPin();
+    const pin = prompt('Insira o PIN do painel admin:');
+    if(pin === savedPin || (!savedPin && pin === '0000')){
+      sessionStorage.setItem('mb_admin_auth','true');
+      init();
+    } else {
+      alert('PIN incorreto.');
+      // keep on the page but hide content
+      document.body.innerHTML = '<div style="font-family:Arial,Helvetica,sans-serif;padding:40px;text-align:center;">PIN incorreto. Recarregue a página para tentar novamente.</div>';
+    }
+  }
+
+  requireAuth();
+
+  /*************************************************************************
+   * Utilities & Rendering
+   *************************************************************************/
+  function formatServiceLabel(sid){
+    const map = {
+      classica:"1ª Aplicação Técnica Clássica",
+      volume_russo:"1ª Aplicação Volume Russo",
+      mega_volume:"1ª Aplicação Mega Volume",
+      manut_classica:"Manutenção Técnica Clássica",
+      manut_volume:"Manutenção Técnica Volume",
+      lifting:"Lifting de Pestanas",
+      sobrancelha:"Design de Sobrancelha"
+    };
+    return map[sid] || sid;
+  }
+
+  async function renderBlocked(){
+    const b = await StorageAPI.getBlocked();
+    const el = document.getElementById('blocked-list');
+    el.innerHTML = '<strong>Dias:</strong> ' + (b.days.length? b.days.join(', ') : 'Nenhum') + '<br><strong>Slots:</strong> ' + (Object.keys(b.slots).length? Object.keys(b.slots).join(', ') : 'Nenhum');
+  }
+
+  async function renderBookings(){
+    const bookings = await StorageAPI.getBookings();
+    const cont = document.getElementById('booking-list');
+    cont.innerHTML = '';
+    if(bookings.length === 0){ cont.innerHTML = '<div class="small">Sem reservas.</div>'; return; }
+    bookings.forEach(b=>{
+      const item = document.createElement('div');
+      item.className = 'booking-item';
+      item.innerHTML = `
+        <div style="flex:1">
+          <div style="font-weight:700">${b.name} <span class="pill">${b.status.toUpperCase()}</span> ${b.paid? '<span class="pill" style="border-color:#0b8a3e;color:#0b8a3e">PAGO</span>' : ''}</div>
+          <div class="booking-meta">${formatServiceLabel(b.service)} • ${b.date} • ${b.time}</div>
+          <div class="booking-meta">Contacto: ${b.contact}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-left:12px">
+          <button class="btn-ok" onclick="markPaid('${b.id}')">Marcar pago</button>
+          <button onclick="approve('${b.id}')">Aprovar</button>
+          <button class="btn-danger" onclick="removeBooking('${b.id}')">Apagar</button>
+        </div>
+      `;
+      cont.appendChild(item);
+    });
+  }
+
+  // actions
+  async function approve(id){
+    if(!confirm('Aprovar reserva?')) return;
+    await StorageAPI.updateBooking(id, {status:'confirmed'});
+    await renderBookings();
+    alert('Reserva aprovada.');
+  }
+  async function markPaid(id){
+    await StorageAPI.updateBooking(id, {paid:true, status:'confirmed'});
+    await renderBookings();
+    alert('Marcado como pago.');
+  }
+  async function removeBooking(id){
+    if(!confirm('Eliminar reserva?')) return;
+    const arr = await StorageAPI.getBookings();
+    const remaining = arr.filter(x=>x.id !== id);
+    localStorage.setItem('mb_bookings', JSON.stringify(remaining));
+    await renderBookings();
+  }
+
+  // blocking
+  document.getElementById('block-day-btn').addEventListener('click', async ()=>{
+    const d = document.getElementById('block-day').value;
+    if(!d){ alert('Escolha uma data'); return; }
+    const b = await StorageAPI.getBlocked();
+    if(!b.days.includes(d)) b.days.push(d);
+    await StorageAPI.saveBlocked(b);
+    await renderBlocked();
+  });
+  document.getElementById('block-slot-btn').addEventListener('click', async ()=>{
+    const d = document.getElementById('block-slot-date').value;
+    const t = document.getElementById('block-slot-time').value;
+    if(!d || !t){ alert('Escolha data e hora'); return; }
+    const b = await StorageAPI.getBlocked();
+    const key = d + ' ' + t;
+    b.slots[key] = true;
+    await StorageAPI.saveBlocked(b);
+    await renderBlocked();
+  });
+
+  // PIN save
+  document.getElementById('save-pin').addEventListener('click', async ()=>{
+    const pin = document.getElementById('admin-pin').value.trim();
+    if(!pin || pin.length < 3){ alert('Escolha um PIN (pelo menos 3 caracteres)'); return; }
+    await StorageAPI.setAdminPin(pin);
+    alert('PIN guardado com sucesso.');
+  });
+
+  // logout
+  document.getElementById('logoutBtn').addEventListener('click', ()=>{
+    sessionStorage.removeItem('mb_admin_auth');
+    location.reload();
+  });
+
+  async function init(){
+    await renderBlocked();
+    await renderBookings();
+  }
+</script>
+</body>
+</html>
