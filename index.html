@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Midnight Beauty — Reserva</title>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg:#f9f6f2;
+      --card:#ffffff;
+      --border:#e7e2dc;
+      --text:#1d1c1c;
+      --muted:#8b8179;
+      --radius:16px;
+      --maxw:1020px;
+    }
+
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      background:var(--bg);
+      font-family:"Montserrat", sans-serif;
+      color:var(--text);
+      padding:20px;
+      display:flex;
+      justify-content:center;
+    }
+
+    .container{
+      width:100%;
+      max-width:var(--maxw);
+      background:#ffffffb5;
+      border-radius:var(--radius);
+      padding:26px;
+      backdrop-filter:blur(8px);
+      border:1px solid var(--border);
+    }
+
+    /* HEADER */
+    header{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding-bottom:18px;
+      border-bottom:1px solid var(--border);
+      flex-wrap:wrap;
+      gap:16px;
+    }
+    .brand{
+      font-family:"Playfair Display", serif;
+      font-size:32px;
+      font-weight:600;
+      letter-spacing:1px;
+    }
+    nav a{
+      text-decoration:none;
+      color:var(--text);
+      font-weight:600;
+      padding:8px 14px;
+      border-radius:10px;
+      transition:0.2s;
+    }
+
+    /* LAYOUT */
+    .layout{
+      margin-top:28px;
+      display:grid;
+      grid-template-columns:1fr 360px;
+      gap:32px;
+    }
+
+    @media(max-width:900px){
+      .layout{
+        grid-template-columns:1fr;
+      }
+    }
+
+    /* SERVICES */
+    .hero h1{
+      font-family:"Playfair Display", serif;
+      font-size:42px;
+      margin:0 0 8px 0;
+      font-weight:600;
+    }
+    .hero p{
+      margin:0;
+      color:var(--muted);
+      font-size:15px;
+    }
+
+    .services{
+      margin-top:24px;
+      display:grid;
+      gap:14px;
+    }
+
+    .service-card{
+      background:var(--card);
+      padding:20px;
+      border-radius:var(--radius);
+      border:1px solid var(--border);
+      cursor:pointer;
+      transition:0.25s ease;
+    }
+    .service-card:hover{
+      transform:translateY(-4px);
+      box-shadow:0 12px 26px rgba(0,0,0,0.05);
+    }
+
+    .service-row{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+    }
+    .service-title{
+      font-family:"Playfair Display", serif;
+      font-size:20px;
+      font-weight:500;
+    }
+    .service-meta{
+      color:var(--muted);
+      font-size:13px;
+      margin-top:6px;
+    }
+
+    .service-details{
+      max-height:0;
+      overflow:hidden;
+      opacity:0;
+      transform:translateY(-6px);
+      transition:0.34s ease;
+    }
+    .service-card.open .service-details{
+      max-height:500px;
+      opacity:1;
+      transform:translateY(0);
+      margin-top:14px;
+    }
+
+    .cta-agendar{
+      margin-top:12px;
+      padding:10px 14px;
+      border-radius:12px;
+      border:1px solid var(--text);
+      background:transparent;
+      font-weight:700;
+      cursor:pointer;
+    }
+
+    /* BOOKING */
+    .booking{
+      position:sticky;
+      top:20px;
+      background:var(--card);
+      padding:20px;
+      border-radius:var(--radius);
+      border:1px solid var(--border);
+    }
+
+    .booking h3{
+      margin:0;
+      font-family:"Playfair Display", serif;
+      font-size:22px;
+      padding-bottom:4px;
+    }
+
+    .booking label{
+      display:block;
+      margin-top:14px;
+      font-size:13px;
+      color:var(--muted);
+    }
+
+    .booking input, .booking select{
+      width:100%;
+      margin-top:6px;
+      padding:12px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      font-size:14px;
+      background:white;
+    }
+
+    .booking .btn{
+      margin-top:18px;
+      width:100%;
+      padding:14px;
+      background:var(--text);
+      color:white;
+      border:none;
+      font-weight:700;
+      border-radius:14px;
+      cursor:pointer;
+    }
+
+    .note{
+      margin-top:16px;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.4;
+      border-top:1px dashed rgba(0,0,0,0.06);
+      padding-top:10px;
+    }
+
+    /* INSTAGRAM CAROUSEL */
+    .insta-carousel{
+      margin-top:40px;
+      position:relative;
+      overflow:hidden;
+      border-radius:var(--radius);
+    }
+    .insta-track{
+      display:flex;
+      transition:transform 0.4s ease;
+    }
+    .insta-slide{
+      min-width:100%;
+      flex-shrink:0;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      background:#f9f6f2;
+      padding:10px;
+    }
+    .insta-slide img{
+      max-width:100%;
+      border-radius:var(--radius);
+      box-shadow:0 10px 20px rgba(0,0,0,0.1);
+    }
+    .insta-btn{
+      position:absolute;
+      top:50%;
+      transform:translateY(-50%);
+      background:rgba(0,0,0,0.3);
+      color:white;
+      border:none;
+      font-size:24px;
+      padding:6px 12px;
+      cursor:pointer;
+      border-radius:50%;
+      z-index:10;
+    }
+    .insta-btn.prev{ left:10px; }
+    .insta-btn.next{ right:10px; }
+
+    footer{
+      margin-top:26px;
+      text-align:center;
+      font-size:13px;
+      color:var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <!-- HEADER -->
+    <header>
+      <div class="brand">Midnight Beauty</div>
+      <nav>
+        <a href="#servicos">Serviços</a>
+        <a href="#instagram">Instagram</a>
+      </nav>
+    </header>
+
+    <div class="layout">
+      <main>
+        <section class="hero">
+          <h1>Reserva Online</h1>
+          <p>Escolhe um serviço, vê a descrição e agenda o teu horário.</p>
+        </section>
+
+        <!-- SERVICES -->
+        <section id="servicos" class="services"></section>
+
+        <!-- INSTAGRAM CAROUSEL COM 3 POSTS FICTÍCIOS -->
+        <section id="instagram" class="insta-carousel">
+          <div class="insta-track" id="insta-track">
+            <div class="insta-slide">
+              <img src="https://via.placeholder.com/500x500/ffe0e0/333333?text=Post+1" alt="Post Fictício 1">
+            </div>
+            <div class="insta-slide">
+              <img src="https://via.placeholder.com/500x500/e0ffe0/333333?text=Post+2" alt="Post Fictício 2">
+            </div>
+            <div class="insta-slide">
+              <img src="https://via.placeholder.com/500x500/e0e0ff/333333?text=Post+3" alt="Post Fictício 3">
+            </div>
+          </div>
+          <button class="insta-btn prev">&#10094;</button>
+          <button class="insta-btn next">&#10095;</button>
+        </section>
+      </main>
+
+      <!-- BOOKING ASIDE -->
+      <aside class="booking">
+        <h3>Agendar</h3>
+
+        <label>Nome</label>
+        <input id="bk-name" placeholder="Nome completo" required>
+
+        <label>Email</label>
+        <input id="bk-email" type="email" placeholder="Email" required>
+
+        <label>WhatsApp</label>
+        <input id="bk-contact" placeholder="Número de contacto" required>
+
+        <label>Serviço</label>
+        <select id="bk-service"><option value="">Seleciona serviço...</option></select>
+
+        <label>Data</label>
+        <input id="bk-date" type="date" required>
+
+        <label>Hora</label>
+        <input id="bk-time" type="time" required>
+
+        <button id="bk-btn" class="btn">Pedir Reserva</button>
+
+        <div class="note">
+          Confirmação só após envio do sinal via MBWAY para <strong>914446025</strong>.
+        </div>
+      </aside>
+    </div>
+
+    <footer>
+      IVA incluído. Política de cancelamento disponível no painel administrativo.
+    </footer>
+  </div>
+
+<script>
+  // SERVIÇOS
+  const SERVICES = [
+    {id:"classica", title:"1ª Aplicação Técnica Clássica", short:"Look natural e elegante.", desc:"Aplicação fio-a-fio para um acabamento natural e sofisticado. Ideal para realçar a beleza natural dos olhos.", price:"40€"},
+    {id:"volume_russo", title:"1ª Aplicação Volume Russo", short:"Volume e definição.", desc:"Leques finos de volume para um efeito dramático e elegante. Máxima densidade mantendo leveza e conforto.", price:"50€"},
+    {id:"mega_volume", title:"1ª Aplicação Mega Volume", short:"Máxima densidade.", desc:"Leques ultra-finos para um volume extremo, perfeito para um look luxuoso e intenso.", price:"65€"},
+    {id:"manut_classica_2", title:"Manutenção Clássica - 2 Semanas", short:"Retoques após 2 semanas.", desc:"Retoques para manter o visual natural e elegante após 2 semanas da aplicação inicial.", price:"20€"},
+    {id:"manut_classica_3", title:"Manutenção Clássica - 3 Semanas", short:"Retoques após 3 semanas.", desc:"Retoques para manter o visual natural e elegante após 3 semanas da aplicação inicial.", price:"25€"},
+    {id:"manut_classica_4", title:"Manutenção Clássica - 4 Semanas", short:"Retoques após 4 semanas.", desc:"Retoques para manter o visual natural e elegante após 4 semanas da aplicação inicial.", price:"35€"},
+    {id:"manut_volume_2", title:"Manutenção Volume - 2 Semanas", short:"Retoques após 2 semanas.", desc:"Manutenção para manter o volume intenso após 2 semanas.", price:"25€"},
+    {id:"manut_volume_3", title:"Manutenção Volume - 3 Semanas", short:"Retoques após 3 semanas.", desc:"Manutenção para manter o volume intenso após 3 semanas.", price:"30€"},
+    {id:"manut_volume_4", title:"Manutenção Volume - 4 Semanas", short:"Retoques após 4 semanas.", desc:"Manutenção para manter o volume intenso após 4 semanas.", price:"35€"},
+    {id:"lifting", title:"Lifting de Pestanas - Sem Botox", short:"Lift natural.", desc:"Lifting de pestanas para curvar e definir de forma natural, realçando o olhar.", price:"25€"},
+    {id:"lifting_botox", title:"Lifting de Pestanas - Com Botox", short:"Lift + nutrição.", desc:"Lifting de pestanas com aplicação de botox nutritivo para força, hidratação e efeito prolongado.", price:"35€"},
+    {id:"sobrancelha", title:"Design de Sobrancelha", short:"Modelagem profissional.", desc:"Modelação das sobrancelhas de forma precisa e elegante para harmonizar o rosto.", price:"5€"}
+  ];
+
+  const servicesEl = document.getElementById("servicos");
+  const serviceSelect = document.getElementById("bk-service");
+
+  function renderServices(){
+    servicesEl.innerHTML = "";
+    SERVICES.forEach(s => {
+      const card = document.createElement("div");
+      card.className = "service-card";
+      card.dataset.id = s.id;
+
+      card.innerHTML = `
+        <div class="service-row">
+          <div>
+            <div class="service-title">${s.title}</div>
+            <div class="service-meta">${s.short}</div>
+          </div>
+        </div>
+        <div class="service-details">
+          <div style="color:var(--muted); font-size:14px;">${s.desc}</div>
+          <div style="margin-top:12px; font-weight:600; font-size:15px;">${s.price}</div>
+          <button class="cta-agendar" data-id="${s.id}">Agendar este serviço</button>
+        </div>`;
+
+      card.addEventListener("click", e => {
+        if(e.target.closest('.cta-agendar')) return;
+        card.classList.toggle("open");
+      });
+
+      card.querySelector('.cta-agendar').addEventListener('click', ev => {
+        ev.stopPropagation();
+        document.getElementById('bk-service').value = s.id;
+        document.getElementById('bk-name').scrollIntoView({behavior:'smooth'});
+      });
+
+      servicesEl.appendChild(card);
+
+      let o = document.createElement("option");
+      o.value = s.id;
+      o.textContent = s.title;
+      serviceSelect.appendChild(o);
+    });
+  }
+
+  renderServices();
+
+  function uuid(){ return "id-" + Math.random().toString(36).slice(2,9); }
+
+  document.getElementById('bk-btn').addEventListener('click', () => {
+    const name = document.getElementById('bk-name').value.trim();
+    const email = document.getElementById('bk-email').value.trim();
+    const contact = document.getElementById('bk-contact').value.trim();
+    const serviceId = document.getElementById('bk-service').value;
+    const date = document.getElementById('bk-date').value;
+    const time = document.getElementById('bk-time').value;
+
+    if(!name || !email || !contact || !serviceId || !date || !time){
+      alert('Preenche todos os campos.');
+      return;
+    }
+
+    const booking = {
+      id: uuid(), name, email, contact, service: serviceId,
+      date, time, status:'pending', paid:false,
+      createdAt: new Date().toISOString()
+    };
+
+    const arr = JSON.parse(localStorage.getItem('mb_bookings') || '[]');
+    arr.unshift(booking);
+    localStorage.setItem('mb_bookings', JSON.stringify(arr));
+
+    alert('Pedido recebido! Envia o sinal via MBWAY para 914446025.');
+  });
+
+  // INSTAGRAM CAROUSEL
+  const track = document.getElementById('insta-track');
+  const slides = document.querySelectorAll('.insta-slide');
+  let currentSlide = 0;
+
+  document.querySelector('.insta-btn.next').addEventListener('click', () => {
+    currentSlide = (currentSlide + 1) % slides.length;
+    track.style.transform = `translateX(-${currentSlide*100}%)`;
+  });
+
+  document.querySelector('.insta-btn.prev').addEventListener('click', () => {
+    currentSlide = (currentSlide - 1 + slides.length) % slides.length;
+    track.style.transform = `translateX(-${currentSlide*100}%)`;
+  });
+</script>
+</body>
+</html>
+
